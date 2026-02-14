@@ -1,53 +1,99 @@
-import { useEffect } from "react";
-import "@/App.css";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import axios from "axios";
+import React, { useState, useEffect } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import './App.css';
+import { getMe } from './api';
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
-const API = `${BACKEND_URL}/api`;
+// Pages
+import HomePage from './pages/HomePage';
+import LoginPage from './pages/LoginPage';
+import RegisterPage from './pages/RegisterPage';
+import CourtsPage from './pages/CourtsPage';
+import BookingPage from './pages/BookingPage';
+import MyBookingsPage from './pages/MyBookingsPage';
+import PaymentSuccessPage from './pages/PaymentSuccessPage';
+import AuthCallback from './pages/AuthCallback';
+import AdminDashboard from './pages/AdminDashboard';
 
-const Home = () => {
-  const helloWorldApi = async () => {
-    try {
-      const response = await axios.get(`${API}/`);
-      console.log(response.data.message);
-    } catch (e) {
-      console.error(e, `errored out requesting / api`);
-    }
-  };
-
-  useEffect(() => {
-    helloWorldApi();
-  }, []);
-
+function AppRouter() {
+  const location = useLocation();
+  
+  // REMINDER: DO NOT HARDCODE THE URL, OR ADD ANY FALLBACKS OR REDIRECT URLS, THIS BREAKS THE AUTH
+  // Check URL fragment for session_id synchronously during render
+  if (location.hash?.includes('session_id=')) {
+    return <AuthCallback />;
+  }
+  
   return (
-    <div>
-      <header className="App-header">
-        <a
-          className="App-link"
-          href="https://emergent.sh"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <img src="https://avatars.githubusercontent.com/in/1201222?s=120&u=2686cf91179bbafbc7a71bfbc43004cf9ae1acea&v=4" />
-        </a>
-        <p className="mt-5">Building something incredible ~!</p>
-      </header>
-    </div>
+    <Routes>
+      <Route path="/" element={<HomePage />} />
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/register" element={<RegisterPage />} />
+      <Route path="/courts" element={<CourtsPage />} />
+      <Route path="/book/:courtId" element={<ProtectedRoute><BookingPage /></ProtectedRoute>} />
+      <Route path="/bookings" element={<ProtectedRoute><MyBookingsPage /></ProtectedRoute>} />
+      <Route path="/payment-success" element={<ProtectedRoute><PaymentSuccessPage /></ProtectedRoute>} />
+      <Route path="/admin" element={<ProtectedRoute adminOnly><AdminDashboard /></ProtectedRoute>} />
+    </Routes>
   );
-};
+}
+
+function ProtectedRoute({ children, adminOnly = false }) {
+  const [isAuthenticated, setIsAuthenticated] = useState(null);
+  const [user, setUser] = useState(null);
+  const navigate = useNavigate();
+  const location = useLocation();
+  
+  useEffect(() => {
+    // Skip auth check if user data was passed from AuthCallback
+    if (location.state?.user) {
+      setUser(location.state.user);
+      setIsAuthenticated(true);
+      return;
+    }
+    
+    const checkAuth = async () => {
+      try {
+        const response = await getMe();
+        setUser(response.data);
+        setIsAuthenticated(true);
+      } catch (error) {
+        setIsAuthenticated(false);
+        navigate('/login');
+      }
+    };
+    
+    checkAuth();
+  }, [navigate, location.state]);
+  
+  if (isAuthenticated === null) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-xl">Loading...</div>
+      </div>
+    );
+  }
+  
+  if (adminOnly && user?.role !== 'admin') {
+    return <Navigate to="/" replace />;
+  }
+  
+  return children;
+}
 
 function App() {
+  const { i18n } = useTranslation();
+  
+  useEffect(() => {
+    // Set RTL/LTR based on language
+    document.documentElement.dir = i18n.language === 'ar' ? 'rtl' : 'ltr';
+    document.documentElement.lang = i18n.language;
+  }, [i18n.language]);
+  
   return (
-    <div className="App">
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Home />}>
-            <Route index element={<Home />} />
-          </Route>
-        </Routes>
-      </BrowserRouter>
-    </div>
+    <BrowserRouter>
+      <AppRouter />
+    </BrowserRouter>
   );
 }
 
