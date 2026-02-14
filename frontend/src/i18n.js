@@ -205,7 +205,10 @@ const resources = {
       totalUsers: 'إجمالي المستخدمين',
       manageBookings: 'إدارة الحجوزات',
       manageUsers: 'إدارة المستخدمين',
-      manageCourts: 'إدارة الملاعب'
+      manageCourts: 'إدارة الملاعب',
+      
+      // Misc
+      or: 'أو'
     }
   }
 };
