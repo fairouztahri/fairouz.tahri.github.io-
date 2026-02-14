@@ -101,7 +101,10 @@ const resources = {
       totalUsers: 'Total Users',
       manageBookings: 'Manage Bookings',
       manageUsers: 'Manage Users',
-      manageCourts: 'Manage Courts'
+      manageCourts: 'Manage Courts',
+      
+      // Misc
+      or: 'or'
     }
   },
   ar: {
